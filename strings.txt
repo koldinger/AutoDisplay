@@ -1,0 +1,41 @@
+PLUGIN_AUTODISPLAY_NAME
+	EN	Auto Dim Display
+
+PLUGIN_AUTODISPLAY_DESC
+	EN	Set automatic display on/off
+
+PLUGIN_AUTODISPLAY_ON_SET
+	EN	Set display on time
+
+PLUGIN_AUTODISPLAY_OFF_SET
+	EN	Set display off time
+
+PLUGIN_AUTODISPLAY_BRIGHTNESS_SET
+	EN	Set brightness level
+
+PLUGIN_AUTODISPLAY_FLAG_ON_OFF
+	EN	Turn plugin On or Off
+
+PLUGIN_AUTODISPLAY_TURNING_OFF
+	EN	Plugin off
+
+PLUGIN_AUTODISPLAY_TURNING_ON
+	EN	Plugin on
+
+SETUP_GROUP_PLUGIN_PLUGINNAME
+	EN	Auto Dim Display
+
+SETUP_GROUP_PLUGIN_PLUGINNAME_DESC
+	EN	Automatically turns off display at set time
+
+PLUGIN_REJECT_INTRO
+	EN	Value rejected
+
+PLUGIN_REJECT_MSG
+	EN	You have entered an incorrect value
+
+PLUGIN_AUTODISPLAY_BRIGHTNESS_DARK
+	EN	Dark
+
+PLUGIN_AUTODISPLAY_BRIGHTNESS_BRIGHTEST
+	EN	Brightest
