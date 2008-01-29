@@ -303,6 +303,8 @@ sub checkOnOff {
 		my $brightness = $myPrefs->client($client)->get('autodisplay_brightness');
 		my $clientname = $client->name();
 
+		$log->debug($clientname . " :: " . $flag . " :: " . $ontime . " :: " . $offtime . " :: " . $brightness);
+
 		#If client has autodisplay on/off preference and times set then continue...
 		if (defined($flag) && defined($offtime) && defined($ontime)) {
 			#If autodisplay has been set to "ON" then continue...
