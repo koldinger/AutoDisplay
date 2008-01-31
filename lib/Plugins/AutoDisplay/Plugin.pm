@@ -3,6 +3,7 @@
 #Purpose: To allow automatic display brightness on-off at specific times.
 #Author: Felix Mueller <felix.mueller(at)gwendesign.com>
 #Redesigned for Slimserver 6.0+ by Tobias Goldstone <tgoldstone(at)familyzoo.net>
+#Ported to SqueezeCenter 7.0+ by Eric Koldinger <eric(at)koldware.com>
 #
 #	Copyright (c) 2004 - 2006 GWENDESIGN
 #	All rights reserved.
@@ -69,7 +70,7 @@ use Slim::Player::Client;
 use strict;
 
 use vars qw($VERSION);
-$VERSION = "0.9";
+$VERSION = "0.91";
 
 my $log = Slim::Utils::Log->addLogCategory({
     'category' => 'plugin.autodisplay',
@@ -336,147 +337,4 @@ sub enabled {
 	return 1;
 }
 
-sub setupGroup {
-	my $client = shift;
-	my %group = (
-		'PrefOrder' => ['autodisplay_flag','autodisplay_off_time','autodisplay_on_time','autodisplay_brightness']
-		,'GroupHead' => Slim::Utils::Strings::string('SETUP_GROUP_PLUGIN_PLUGINNAME')
-		,'GroupDesc' => Slim::Utils::Strings::string('SETUP_GROUP_PLUGIN_PLUGINNAME_DESC')
-		,'GroupLine' => 1
-		,'GroupSub'  => 1
-		,'PrefsInTable' => 1
-		,'Suppress_PrefHead' => 1
-		,'Suppress_PrefDesc' => 1
-		,'Suppress_PrefLine' => 1
-		,'Suppress_PrefSub' => 1
-	);
-	my %prefs = (
-		'autodisplay_flag' => {
-###			'validate' => \&Slim::Web::Setup::validateTrueFalse
-			'validate' => \&Slim::Utils::Validate::trueFalse
-			,'currentValue' => sub {
-				my $client = shift;
-				my $val = $myPrefs->client($client)->get('autodisplay_flag');
-				if (!defined $val) {
-							$myPrefs->client($client)->set('autodisplay_flag',0);
-						}
-
-				return $val;
-			}
-			
-			,'PrefHead' => ' '
-			,'PrefChoose' => string('PLUGIN_AUTODISPLAY_FLAG_ON_OFF').string('COLON')
-			,'changeIntro' => string('PLUGIN_AUTODISPLAY_FLAG_ON_OFF').string('COLON')
-			,'options'  => {
-				'1' => string('ON'),
-				'0' => string('OFF'),		
-			}
-		},
-
-		'autodisplay_on_time' => {
-###			'validate' => \&Slim::Web::Setup::validateTime
-			'validate' => \&Slim::Utils::Validate::isTime
-			,'validateArgs' => [0,undef]
-			,'PrefHead' => ' '
-			,'PrefChoose' => string('PLUGIN_AUTODISPLAY_ON_SET').string('COLON')
-			,'rejectIntro' => string('PLUGIN_REJECT_INTRO').string('COLON').string('PLUGIN_AUTODISPLAY_ON_SET')
-			,'rejectMSG' => string('PLUGIN_REJECT_MSG')
-			,'changeIntro' => string('PLUGIN_AUTODISPLAY_ON_SET').string('COLON')
-			,'currentValue' => sub {
-				my $client = shift;
-				return if (!defined($client));
-				my $time =  $myPrefs->client($client)->get('autodisplay_on_time');
-				my ($h0, $h1, $m0, $m1, $p) = Slim::Buttons::Common::timeDigits($client,$time);
-				my $timestring = ((defined($p) && $h0 == 0) ? ' ' : $h0) . $h1 . ":" . $m0 . $m1 . " " . (defined($p) ? $p : '');
-				
-				return $timestring;
-										
-			}
-			,'onChange' => sub {
-				my ($client,$changeref,$paramref,$pageref) = @_;
-				return if (!defined($client));
-				my $time = $changeref->{'autodisplay_on_time'}{'new'};
-				my $newtime = 0;
-				$time =~ s{
-					^(0?[0-9]|1[0-9]|2[0-4]):([0-5][0-9])\s*(P|PM|A|AM)?$
-				}{
-					if (defined $3) {
-						$newtime = ($1 == 12?0:$1 * 60 * 60) + ($2 * 60) + ($3 =~ /P/?12 * 60 * 60:0);
-					} else {
-						$newtime = ($1 * 60 * 60) + ($2 * 60);
-					}
-				}iegsx;
-				$myPrefs->client($client)->set('autodisplay_on_time',$newtime);
-			}
-		},
-		'autodisplay_off_time' => {
-###			'validate' => \&Slim::Web::Setup::validateAcceptAll
-			'validate' => \&Slim::Utils::Validate::isTime
-			,'PrefHead' => ' '
-			,'PrefChoose' => string('PLUGIN_AUTODISPLAY_OFF_SET').string('COLON')
-			,'changeIntro' => string('PLUGIN_AUTODISPLAY_OFF_SET').string('COLON')
-			,'rejectIntro' => string('PLUGIN_REJECT_INTRO').string('COLON').string('PLUGIN_AUTODISPLAY_OFF_SET')
-			,'rejectMSG' => string('PLUGIN_REJECT_MSG')
-			,'validateArgs' => [0,undef]
-			,'currentValue' => sub {
-				my $client = shift;
-				return if (!defined($client));
-				my $time =  $myPrefs->client($client)->get('autodisplay_off_time');
-				my ($h0, $h1, $m0, $m1, $p) = Slim::Buttons::Common::timeDigits($client,$time);
-				my $timestring = ((defined($p) && $h0 == 0) ? ' ' : $h0) . $h1 . ":" . $m0 . $m1 . " " . (defined($p) ? $p : '');
-				return $timestring;							
-			}
-			,'onChange' => sub {
-				my ($client,$changeref,$paramref,$pageref) = @_;
-				my $time = $changeref->{'autodisplay_off_time'}{'new'};
-				my $newtime = 0;
-				
-				$time =~ s{
-					^(0?[0-9]|1[0-9]|2[0-4]):([0-5][0-9])\s*(P|PM|A|AM)?$
-				}{
-					if (defined $3) {
-						$newtime = ($1 == 12?0:$1 * 60 * 60) + ($2 * 60) + ($3 =~ /P/?12 * 60 * 60:0);
-					} else {
-						$newtime = ($1 * 60 * 60) + ($2 * 60);
-					}
-				}iegsx;
-				$myPrefs->client($client)->set('autodisplay_off_time',$newtime);
-			}
-		},
-		'autodisplay_brightness' => {
-			'validate'     => \&Slim::Utils::Validate::isInt
-			,'validateArgs' => [0,1,2,3,4]
-			,'optionSort'   => 'NK'
-			,'options'      => \&getBrightnessOptions
-			,'PrefHead' => ' '
-			,'PrefChoose' => string('PLUGIN_AUTODISPLAY_BRIGHTNESS_SET').string('COLON')
-			,'changeIntro' => string('PLUGIN_AUTODISPLAY_BRIGHTNESS_SET').string('COLON')
-			,'rejectIntro' => string('PLUGIN_REJECT_INTRO').string('COLON').string('PLUGIN_AUTODISPLAY_BRIGHTNESS_SET')
-			,'rejectMSG' => string('PLUGIN_REJECT_MSG')
-			,'currentValue' => sub {
-				my $client = shift;
-				my $brightness =  $myPrefs->client($client)->get('autodisplay_brightness');
-				return $brightness;							
-			}
-			,'onChange' => sub {
-				my ($client,$changeref,$paramref,$pageref) = @_;
-				my $brightness = $changeref->{'autodisplay_brightness'}{'new'};
-				$myPrefs->client($client)->set('autodisplay_brightness',$brightness);
-			}
-		}
-	);
-	
-	return (\%group,\%prefs,1);
-
-    sub getBrightnessOptions {
-	    my %brightnesses = (
-						    '0' => '0 ('.string('PLUGIN_AUTODISPLAY_BRIGHTNESS_DARK').')',
-						    '1' => '1',
-						    '2' => '2',
-						    '3' => '3',
-						    '4' => '4 ('.string('PLUGIN_AUTODISPLAY_BRIGHTNESS_BRIGHTEST').')',
-						    );
-	    return \%brightnesses;
-    }
-}
 1;
