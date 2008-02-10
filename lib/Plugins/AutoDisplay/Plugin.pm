@@ -70,7 +70,7 @@ use Slim::Player::Client;
 use strict;
 
 use vars qw($VERSION);
-$VERSION = "0.91";
+$VERSION = "1.00";
 
 my $log = Slim::Utils::Log->addLogCategory({
     'category' => 'plugin.autodisplay',
