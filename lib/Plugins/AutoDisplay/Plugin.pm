@@ -74,7 +74,7 @@ $VERSION = "1.00";
 
 my $log = Slim::Utils::Log->addLogCategory({
     'category' => 'plugin.autodisplay',
-    'defaultLevel' => 'DEBUG',
+    'defaultLevel' => 'ERROR',
     'description' => 'PLUGIN_AUTODISPLAY_NAME'
 });
 
