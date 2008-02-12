@@ -4,23 +4,26 @@ PLUGIN_AUTODISPLAY_NAME
 PLUGIN_AUTODISPLAY_DESC
 	EN	Set automatic display on/off
 
-PLUGIN_AUTODISPLAY_ON_SET
-	EN	Set display on time
+PLUGIN_AUTODISPLAY_BRIGHT_SET
+	EN	Set display bright time
 
-PLUGIN_AUTODISPLAY_OFF_SET
-	EN	Set display off time
+PLUGIN_AUTODISPLAY_DIM_SET
+	EN	Set display dim time
 
 PLUGIN_AUTODISPLAY_BRIGHTNESS_SET
 	EN	Set brightness level
 
 PLUGIN_AUTODISPLAY_FLAG_ON_OFF
-	EN	Turn plugin On or Off
+	EN	Toggle autodimming for this player.
+
+PLUGIN_AUTODISPLAY_FLAG_OFF
+	EN	Disable autodimming for this player.
 
 PLUGIN_AUTODISPLAY_TURNING_OFF
-	EN	Plugin off
+	EN	Auto Dimming off
 
 PLUGIN_AUTODISPLAY_TURNING_ON
-	EN	Plugin on
+	EN	Auto Dimming on
 
 SETUP_GROUP_PLUGIN_PLUGINNAME
 	EN	Auto Dim Display
@@ -41,7 +44,10 @@ PLUGIN_AUTODISPLAY_BRIGHTNESS_BRIGHTEST
 	EN	Brightest
 
 PLUGIN_AUTODISPLAY_ENABLE
-	EN	Enable Auto Display
+	EN	Enable Auto Dim Display
 
 PLUGIN_AUTODISPLAY_BRIGHTNESS
 	EN	Select Dimmed Brightness Level
+
+PLUGIN_AUTODISPLAY_NODISPLAY
+	EN	Player does not have a display.
