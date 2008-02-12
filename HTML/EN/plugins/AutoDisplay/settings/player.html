@@ -1,21 +1,25 @@
 [% PROCESS settings/header.html %]
-    [% WRAPPER setting title="PLUGIN_AUTODISPLAY_ENABLE" desc="" %]
-	<input type="checkbox" [% IF prefs.autodisplay_flag %]checked [% END %] class="stdedit" name="autodisplay_flag" id="autodisplay_flag" value="1"/>
-	<label for="enabled" class="stdlabel">[% "PLUGIN_AUTODISPLAY_ENABLE" | string %]</label>
-    [% END %]
+    [% IF nodisplay %]
+	[% 'PLUGIN_AUTODISPLAY_NODISPLAY' | string %]
+    [% ELSE %]
+	[% WRAPPER setting title="PLUGIN_AUTODISPLAY_ENABLE" desc="" %]
+	    <input type="checkbox" [% IF prefs.autodisplay_flag %]checked [% END %] class="stdedit" name="autodisplay_flag" id="autodisplay_flag" value="1"/>
+	    <label for="enabled" class="stdlabel">[% "PLUGIN_AUTODISPLAY_ENABLE" | string %]</label>
+	[% END %]
 
-    [% WRAPPER setting title="PLUGIN_AUTODISPLAY_ON_SET" desc="" %]
-	<input type="text" class="stdedit" name="starttime" id="starttime" value="[% starttime %]" size="10" />
-    [% END %]
-    [% WRAPPER setting title="PLUGIN_AUTODISPLAY_OFF_SET" desc="" %]
-	<input type="text" class="stdedit" name="endtime" id="endtime" value="[% endtime %]" size="10" />
-    [% END %]
+	[% WRAPPER setting title="PLUGIN_AUTODISPLAY_DIM_SET" desc="" %]
+	    <input type="text" class="stdedit" name="dimtime" id="dimtime" value="[% dimtime %]" size="10" />
+	[% END %]
+	[% WRAPPER setting title="PLUGIN_AUTODISPLAY_BRIGHT_SET" desc="" %]
+	    <input type="text" class="stdedit" name="brighttime" id="brighttime" value="[% brighttime %]" size="10" />
+	[% END %]
 
-    [% WRAPPER setting title="PLUGIN_AUTODISPLAY_BRIGHTNESS" desc="PLUGIN_AUTODISPLAY_BRIGHTNESS" %]
-	<select name="autodisplay_brightness" id="autodisplay_brightness">
-	    [% FOREACH brightness = brightValues %]
-		<option value="[% brightness.key %]" [% IF prefs.autodisplay_brightness == brightness.key %]selected[% END %]>[% brightness.value %]</option>
-	    [% END %]
-	</select>
+	[% WRAPPER setting title="PLUGIN_AUTODISPLAY_BRIGHTNESS" desc="PLUGIN_AUTODISPLAY_BRIGHTNESS" %]
+	    <select name="autodisplay_brightness" id="autodisplay_brightness">
+		[% FOREACH brightness = brightValues %]
+		    <option value="[% brightness.key %]" [% IF prefs.autodisplay_brightness == brightness.key %]selected[% END %]>[% brightness.value %]</option>
+		[% END %]
+	    </select>
+	[% END %]
     [% END %]
 [% PROCESS settings/footer.html %]

@@ -11,18 +11,12 @@ use base qw(Slim::Web::Settings);
 use Slim::Utils::Log;
 use Slim::Utils::Prefs;
 use Slim::Utils::Strings qw (string);
+use Slim::Display::NoDisplay;
+use Slim::Display::Display;
 
 
 my $prefs = preferences('plugin.autodisplay');
 my $log   = logger('plugin.autodisplay');
-
-my $brightValues =
-    {
-	1 => '1 ' . string('PLUGIN_AUTODISPLAY_BRIGHTNESS_DARK'),
-	2 => '2',
-	3 => '3',
-	4 => '4 ' . string('PLUGIN_AUTODISPLAY_BRIGHTNESS_BRIGHTEST'),
-    };
 
 sub name {
     $log->debug("AutoDisplay::PlayerSettings->name() called");
@@ -56,16 +50,33 @@ sub handler {
 
     if ($params->{'saveSettings'})
     {
-	$log->debug("AutoDisplay: Saving: " . $params->{'starttime'} . ":" . $params->{'endtime'});
-	$log->debug("AutoDisplay: Saving: " . $params->{'brightValue'});
-	$prefs->client($client)->set('autodisplay_on_time', Slim::Utils::DateTime::prettyTimeToSecs($params->{'starttime'}));
-	$prefs->client($client)->set('autodisplay_off_time', Slim::Utils::DateTime::prettyTimeToSecs($params->{'endtime'}));
+		$log->debug("AutoDisplay: Saving: " . $params->{'brighttime'} . ":" . $params->{'dimtime'});
+		$log->debug("AutoDisplay: Saving: " . $params->{'brightValue'});
+		$prefs->client($client)->set('autodisplay_on_time', Slim::Utils::DateTime::prettyTimeToSecs($params->{'brighttime'}));
+		$prefs->client($client)->set('autodisplay_off_time', Slim::Utils::DateTime::prettyTimeToSecs($params->{'dimtime'}));
+		Plugins::AutoDisplay::Plugin->checkOnOff();
     }
-    $params->{'starttime'} = Slim::Utils::DateTime::secsToPrettyTime($prefs->client($client)->get('autodisplay_on_time'));
-    $params->{'endtime'} = Slim::Utils::DateTime::secsToPrettyTime($prefs->client($client)->get('autodisplay_off_time'));
-    $params->{'brightValues'} = $brightValues;
+    $params->{'nodisplay'} = 1 if ($client->display->isa('Slim::Display::NoDisplay'));
+
+    $params->{'brighttime'} = Slim::Utils::DateTime::secsToPrettyTime($prefs->client($client)->get('autodisplay_on_time'));
+    $params->{'dimtime'} = Slim::Utils::DateTime::secsToPrettyTime($prefs->client($client)->get('autodisplay_off_time'));
+    $params->{'brightValues'} = makeBrightValues($client);
 
     return $class->SUPER::handler( $client, $params );
+}
+
+sub makeBrightValues {
+    my $client = shift;
+    my $max = $client->display->maxBrightness();
+    my $brightValues;
+    foreach my $i (0 .. $max)
+    {
+	my $string = $i;
+	$string = $string . " " . string('PLUGIN_AUTODISPLAY_BRIGHTNESS_DARK') if ($i == 0);
+	$string = $string . " " . string('PLUGIN_AUTODISPLAY_BRIGHTNESS_BRIGHTEST') if ($i == $max);
+	$brightValues->{$i} = $string;
+    }
+    return $brightValues;
 }
 
 1;
