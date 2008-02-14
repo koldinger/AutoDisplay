@@ -85,8 +85,20 @@ sub getDisplayName {
 my $myPrefs = preferences('plugin.autodisplay');
 my $serverPrefs = preferences('server');
 
-my @browseMenuChoices;
+my @browseMenuChoices = (
+	'PLUGIN_AUTODISPLAY_FLAG_ON_OFF',		## Keep this first.
+	'PLUGIN_AUTODISPLAY_DIM_SET',
+	'PLUGIN_AUTODISPLAY_BRIGHT_SET',
+	'PLUGIN_AUTODISPLAY_BRIGHTNESS_SET'
+);
 my %menuSelection;
+
+my %defaults = (
+	'autodisplay_flag'			=> 0,				# Off by default
+	'autodisplay_on_time'		=> 8 * 60 * 60,		# 8 AM default on time
+	'autodisplay_off_time'		=> 20 * 60 * 60,	# 8 PM default off time.
+	'autodisplay_brightness'	=> 0,				# All the way dark.  Supported everyplace
+);
 
 my $timer;
 
@@ -95,14 +107,12 @@ my %functions = (
     	'up' => sub  {
     		my $client = shift;
     		my $newposition = Slim::Buttons::Common::scroll($client, -1, ($#browseMenuChoices + 1), $menuSelection{$client});
-    
     		$menuSelection{$client} =$newposition;
     		$client->update();
     	},
     	'down' => sub  {
     		my $client = shift;
     		my $newposition = Slim::Buttons::Common::scroll($client, +1, ($#browseMenuChoices + 1), $menuSelection{$client});
-    
     		$menuSelection{$client} =$newposition;
     		$client->update();
     	},
@@ -124,32 +134,21 @@ my %functions = (
     	},
     	'right' => sub {
     		my $client = shift;
-###    		my @oldlines = Slim::Display::Display::curLines($client);
     		my @oldlines = $client->curLines();
+			my $choice = $browseMenuChoices[$menuSelection{$client}];
 
-			if ($browseMenuChoices[$menuSelection{$client}] eq $client->string('PLUGIN_AUTODISPLAY_FLAG_ON_OFF')) {
+			if ($choice eq 'PLUGIN_AUTODISPLAY_FLAG_ON_OFF') {
 				my $flag = $myPrefs->client($client)->get('autodisplay_flag');
+				my $newflag = ($flag ? 0 : 1);
+				$myPrefs->client($client)->set('autodisplay_flag', $newflag);
+
+				my $line = ($flag ?  'PLUGIN_AUTODISPLAY_TURNING_OFF' : 'PLUGIN_AUTODISPLAY_TURNING_ON');
 				
-			#Turn on or off plugin using player menu
-			#If plugin is 'ON' then set to 'OFF' and display message
-				if ($flag ==1) {
-					
-					$myPrefs->client($client)->set('autodisplay_flag','0');
-					my $newflag = $myPrefs->client($client)->get('autodisplay_flag');
-					$client->showBriefly({'line1' => $client->string('PLUGIN_AUTODISPLAY_TURNING_OFF'), 'line2' => ''});
-				}	
-			#If plugin has been set to'OFF' then set to 'ON'
-				else {
-				
-					$myPrefs->client($client)->set('autodisplay_flag','1');
-					$client->showBriefly({ 'line1' => $client->string('PLUGIN_AUTODISPLAY_TURNING_ON'), 'line2' => ''});
-					my $displayflag = $myPrefs->client($client)->get('autodisplay_flag');
-					
-				}
+				$client->showBriefly({'line1' => $client->string($line), 'line2' => ''});
 			}
 
 			#Set time to turn off display
-			elsif($browseMenuChoices[$menuSelection{$client}] eq $client->string('PLUGIN_AUTODISPLAY_DIM_SET')) {
+			elsif ($choice eq 'PLUGIN_AUTODISPLAY_DIM_SET') {
 				
 				my %params = (
 					'header' => $client->string('PLUGIN_AUTODISPLAY_DIM_SET'),
@@ -161,64 +160,73 @@ my %functions = (
 			}
 
 			#Set time for plugin to turn on display	
-			elsif ($browseMenuChoices[$menuSelection{$client}] eq $client->string('PLUGIN_AUTODISPLAY_BRIGHT_SET')) {
+			elsif ($choice eq 'PLUGIN_AUTODISPLAY_BRIGHT_SET') {
     			my %params = (
-    					'header' => $client->string('PLUGIN_AUTODISPLAY_BRIGHT_SET'),
-    					'valueRef' => $myPrefs->client($client)->get('autodisplay_on_time'),
-    					'cursorPos' => 0,
-    					'callback' => \&settingsExitHandler
-    				);
-    				Slim::Buttons::Common::pushModeLeft($client, 'INPUT.Time',\%params);
+					'header' => $client->string('PLUGIN_AUTODISPLAY_BRIGHT_SET'),
+					'valueRef' => $myPrefs->client($client)->get('autodisplay_on_time'),
+					'cursorPos' => 0,
+					'callback' => \&settingsExitHandler
+				);
+				Slim::Buttons::Common::pushModeLeft($client, 'INPUT.Time',\%params);
 			}
-			elsif ($browseMenuChoices[$menuSelection{$client}] eq $client->string('PLUGIN_AUTODISPLAY_BRIGHTNESS_SET')) {
+			elsif ($choice eq 'PLUGIN_AUTODISPLAY_BRIGHTNESS_SET') {
     			my %params = (
-						'listRef' => [0 .. $client->display->maxBrightness()],
-						'externRef' => [string('BRIGHTNESS_DARK'),
-										1 .. $client->display->maxBrightness() - 1,
-										string('BRIGHTNESS_BRIGHTEST')],
-    					'header' => $client->string('PLUGIN_AUTODISPLAY_BRIGHTNESS_SET'),
-    					'valueRef' => $myPrefs->client($client)->get('autodisplay_brightness'),
-    					'cursorPos' => 0,
-    					'callback' => \&settingsExitHandler,
-    				);
+					'listRef' => [0 .. $client->display->maxBrightness()],
+					'externRef' => [$client->string('BRIGHTNESS_DARK') . ' (0)',
+									1 .. $client->display->maxBrightness() - 1,
+									$client->string('BRIGHTNESS_BRIGHTEST') . ' (' . $client->display->maxBrightness() . ')' ],
+					'header' => $client->string('PLUGIN_AUTODISPLAY_BRIGHTNESS_SET'),
+					'valueRef' => $myPrefs->client($client)->get('autodisplay_brightness'),
+					'cursorPos' => 0,
+					'callback' => \&settingsExitHandler,
+				);
 				Slim::Buttons::Common::pushModeLeft($client, 'INPUT.List',\%params);
 			}
     	},
-    	'play' => sub {
-    		my $client = shift;
-    	},
+		'play' => sub {
+			my $client = shift;
+		},
     );
 
-sub setMode() {
+
+sub setDefaults {
+	my $client = shift;
+    my $force = shift;
+	my $clientPrefs = $myPrefs->client($client);
+	$log->debug("Checking defaults for " . $client->name());
+	foreach my $key (keys %defaults) {
+		if (!defined($clientPrefs->get($key)) || $force) {
+			$log->debug("Setting default value for $key: " . $defaults{$key});
+			$clientPrefs->set($key, $defaults{$key});
+		}
+	}
+}
+
+# Hack.  External version.  Called with class as first argument.  Yuck.
+sub extSetDefaults {
+	my $class = shift;			## Get rid of this
+	my $client = shift;
+    my $force = shift;
+	setDefaults($client, $force);
+}
+
+sub newClient {
+	my $request = shift;
+	setDefaults($request->client(), 0);
+}
+
+sub setMode {
 	my $class = shift;
 	my $client = shift;
 	$log->debug("Setting autodisplay mode for " . $client->name());
-	@browseMenuChoices = (
-		$client->string('PLUGIN_AUTODISPLAY_FLAG_ON_OFF'),
-		$client->string('PLUGIN_AUTODISPLAY_BRIGHT_SET'),
-		$client->string('PLUGIN_AUTODISPLAY_DIM_SET'),
-		$client->string('PLUGIN_AUTODISPLAY_BRIGHTNESS_SET')
-		);
 	
-	if (!defined($menuSelection{$client})) { $menuSelection{$client} = 0; };
+	if (!defined($menuSelection{$client})) {
+		## First time we've seen this client since reboot.
+		$menuSelection{$client} = 0;
+		## Check the defaults as well.
+		setDefaults($client, 0);
+	};
 	$client->lines(\&lines);
-
-	#Set client default
-	my $flag = $myPrefs->client($client)->get('autodisplay_flag');
-	if (!defined($flag)) {$myPrefs->client($client)->set('autodisplay_flag',0); }
-	
-
-	#get previous set on time or set a default
-	my $ontime = $myPrefs->client($client)->get('autodisplay_on_time');
-	if (!defined($ontime)) {$myPrefs->client($client)->set('autodisplay_on_time',8 * 60 * 60); }
-
-	#get previous set off time or set a default
-	my $offtime = $myPrefs->client($client)->get('autodisplay_off_time');
-	if (!defined($offtime)) {$myPrefs->client($client)->set('autodisplay_off_time',20 * 60 * 60); }
-
-	#get brightness level or set a default
-	my $brightness = $myPrefs->client($client)->get('autodisplay_brightness');
-	if (!defined($brightness)) {$myPrefs->client($client)->set('autodisplay_brightness',0); }
 }
    
 sub lines {
@@ -229,7 +237,12 @@ sub lines {
 	
 	$line1 = $client->string('PLUGIN_AUTODISPLAY_NAME') . " (" . ($menuSelection{$client}+1) . " " . $client->string('OF') . " " . ($#browseMenuChoices + 1) . ")";
 
-	$line2 = $browseMenuChoices[$menuSelection{$client}];
+	if ($menuSelection{$client} != 0) {
+		$line2 = $client->string($browseMenuChoices[$menuSelection{$client}]);
+	} else {
+		my $flag = $myPrefs->client($client)->get('autodisplay_flag');
+		$line2 = $client->string(($flag ? 'PLUGIN_AUTODISPLAY_FLAG_OFF' : 'PLUGIN_AUTODISPLAY_FLAG_ON'));
+	}
 	
 	return { 'line1' => $line1, 'line2' => $line2, 'overlay' => $overlay2 };
 }
@@ -253,7 +266,8 @@ sub initPlugin {
 
 	## Anytime there's a power event, or a new client (or even client forgotten) event,
 	## let's check everything.
-	Slim::Control::Request::subscribe( \&checkOnOff, [['power', 'client']]);
+	Slim::Control::Request::subscribe( \&checkOnOff, [['power']]);
+	Slim::Control::Request::subscribe( \&newClient, [['client']]);
 
     setTimer(now());
 }
@@ -264,15 +278,15 @@ sub settingsExitHandler {
 	$exittype = uc($exittype);
 
 	if ($exittype eq 'LEFT' || $exittype eq 'RIGHT') {
-		if ($browseMenuChoices[$menuSelection{$client}] eq $client->string('PLUGIN_AUTODISPLAY_BRIGHT_SET')) {
+		if ($browseMenuChoices[$menuSelection{$client}] eq 'PLUGIN_AUTODISPLAY_BRIGHT_SET') {
 			$myPrefs->client($client)->set('autodisplay_on_time', ${$client->modeParam('valueRef')});
 			Slim::Buttons::Common::popModeRight($client);
 		}
-		elsif ($browseMenuChoices[$menuSelection{$client}] eq $client->string('PLUGIN_AUTODISPLAY_DIM_SET')){
+		elsif ($browseMenuChoices[$menuSelection{$client}] eq 'PLUGIN_AUTODISPLAY_DIM_SET'){
 			$myPrefs->client($client)->set('autodisplay_off_time', ${$client->modeParam('valueRef')});
 			Slim::Buttons::Common::popModeRight($client);
 		}
-		elsif ($browseMenuChoices[$menuSelection{$client}] eq $client->string('PLUGIN_AUTODISPLAY_BRIGHTNESS_SET')){
+		elsif ($browseMenuChoices[$menuSelection{$client}] eq 'PLUGIN_AUTODISPLAY_BRIGHTNESS_SET'){
 			$myPrefs->client($client)->set('autodisplay_brightness', ${$client->modeParam('valueRef')});
 			Slim::Buttons::Common::popModeRight($client);
 		}
@@ -322,7 +336,7 @@ sub checkOnOff {
 	my $time = now();
 	
 	$log->debug("Checking timer Autodisplay plugin: " . $time);
-	
+
 	foreach my $client (Slim::Player::Client::clients()) {
 		my $clientPrefs = $myPrefs->client($client);
 		my $flag = $clientPrefs->get('autodisplay_flag');

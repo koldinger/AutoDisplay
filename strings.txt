@@ -2,40 +2,28 @@ PLUGIN_AUTODISPLAY_NAME
 	EN	Auto Dim Display
 
 PLUGIN_AUTODISPLAY_DESC
-	EN	Set automatic display on/off
-
-PLUGIN_AUTODISPLAY_BRIGHT_SET
-	EN	Set display bright time
+	EN	Set automatic display dimming
 
 PLUGIN_AUTODISPLAY_DIM_SET
 	EN	Set display dim time
 
-PLUGIN_AUTODISPLAY_BRIGHTNESS_SET
-	EN	Set brightness level
+PLUGIN_AUTODISPLAY_BRIGHT_SET
+	EN	Set display bright time
 
-PLUGIN_AUTODISPLAY_FLAG_ON_OFF
-	EN	Toggle autodimming for this player.
+PLUGIN_AUTODISPLAY_BRIGHTNESS_SET
+	EN	Set dimmed brightness level
+
+PLUGIN_AUTODISPLAY_FLAG_ON
+	EN	Enable autodimming
 
 PLUGIN_AUTODISPLAY_FLAG_OFF
-	EN	Disable autodimming for this player.
+	EN	Disable autodimming
 
 PLUGIN_AUTODISPLAY_TURNING_OFF
 	EN	Auto Dimming off
 
 PLUGIN_AUTODISPLAY_TURNING_ON
 	EN	Auto Dimming on
-
-SETUP_GROUP_PLUGIN_PLUGINNAME
-	EN	Auto Dim Display
-
-SETUP_GROUP_PLUGIN_PLUGINNAME_DESC
-	EN	Automatically turns off display at set time
-
-PLUGIN_REJECT_INTRO
-	EN	Value rejected
-
-PLUGIN_REJECT_MSG
-	EN	You have entered an incorrect value
 
 PLUGIN_AUTODISPLAY_BRIGHTNESS_DARK
 	EN	Dark
