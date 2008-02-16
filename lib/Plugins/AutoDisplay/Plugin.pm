@@ -12,6 +12,7 @@
 #	And based on Autodisplay Revision .2 by Felix Mueller
 #
 #	History:
+#   2008/02/15 v1.00 Squeezecenter 7.  Many cleanups.
 #	2006/12/24 v0.82 Minor bug fix.
 #	2006/12/10 V0.81 24H time format does not save in Web UI
 #	2006/11/12 V0.8 - Various bugfixes
