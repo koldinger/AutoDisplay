@@ -213,7 +213,10 @@ sub extSetDefaults {
 
 sub newClient {
 	my $request = shift;
-	setDefaults($request->client(), 0);
+	my $client = $request->client();
+	$log->debug("New client: " . $client->name());
+	setDefaults($client, 0);
+	checkOnOff();
 }
 
 sub setMode {
@@ -270,7 +273,13 @@ sub initPlugin {
 	Slim::Control::Request::subscribe( \&checkOnOff, [['power']]);
 	Slim::Control::Request::subscribe( \&newClient, [['client']]);
 
-    setTimer(now());
+	## Initialize all known clients
+	foreach my $client (Slim::Player::Client::clients()) {
+		setDefaults($client, 0);
+	}
+
+	## And check what the current status us, setting a timer in the process.
+	checkOnOff();
 }
 
 sub settingsExitHandler {
@@ -303,7 +312,7 @@ sub setTimer {
     
 	my $later = nextTime($now);
     my $time = Time::HiRes::time() + ($later - $now);
-    $log->debug("Setting timer: " . $time . "(" . $later . " " . $now . ")");
+    $log->debug("Setting timer: Now: $now Later: $later Diff: " . ($later - $now) . " Time: $time");
     $timer = Slim::Utils::Timers::setTimer(0, $time, \&checkOnOff);
 }
 
@@ -347,7 +356,7 @@ sub checkOnOff {
 			my $brightness = $clientPrefs->get('autodisplay_brightness');
 			my $clientname = $client->name();
 
-			$log->debug($clientname . " :: " . $flag . " :: " . $ontime . " :: " . $offtime . " :: " . $brightness);
+			$log->debug($clientname . " BrightTime " . $ontime . " DimTime " . $offtime . " Dim Level " . $brightness);
 
 			#If client has autodisplay on/off preference and times set then continue...
 			if (defined($flag) && defined($offtime) && defined($ontime)) {
@@ -358,13 +367,13 @@ sub checkOnOff {
 					if (($offtime > $ontime && ($time >= $offtime || $time < $ontime)) ||
 						($offtime < $ontime && $time >= $offtime && $time < $ontime)) {
 					
-						$log->debug("$clientname Lowering $brightness");
+						$log->debug("$clientname Dim: $brightness");
 						#Set client brightness off
 						$client->brightness($brightness);
 					} else {
 						#Reset display brightness to user preference.
 						my $x = $serverPrefs->client($client)->get('powerOffBrightness');
-						$log->debug("$clientname Raising " .  $x);
+						$log->debug("$clientname Bright: " .  $x);
 						$client->brightness($x);
 					}
 				}
