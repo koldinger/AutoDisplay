@@ -103,6 +103,8 @@ my %defaults = (
 
 my $timer;
 
+use constant DAY => (3600 * 24);				## Seconds in a day
+
 our $brightness = ();
 my %functions = (
     	'up' => sub  {
@@ -306,46 +308,18 @@ sub settingsExitHandler {
 	} 
 }
 
-sub setTimer {
-	my $now = shift;
-    Slim::Utils::Timers::killSpecific($timer) if (defined $timer);
-    
-	my $later = nextTime($now);
-    my $time = Time::HiRes::time() + ($later - $now);
-    $log->debug("Setting timer: Now: $now Later: $later Diff: " . ($later - $now) . " Time: $time");
-    $timer = Slim::Utils::Timers::setTimer(0, $time, \&checkOnOff);
-}
-
 sub now {
     my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
     my $time = $hour * 60 * 60 + $min * 60 + $sec;
     return $time;
 }
 
-sub nextTime {
-    my $now = shift;
-	my $day = 3600 * 24;				## Seconds in a day
-	my $earliest = $now + $day * 7;		## Week away.  Good number.
-	foreach my $client (Slim::Player::Client::clients()) {
-		my $clientPrefs = $myPrefs->client($client);
-		my $flag = $clientPrefs->get('autodisplay_flag');
-		if ($flag) {
-			my $ontime =  $clientPrefs->get('autodisplay_on_time');
-			my $offtime =  $clientPrefs->get('autodisplay_off_time');
-
-			$ontime   += $day if ($ontime <= $now);
-			$offtime  += $day if ($offtime <= $now);
-			$earliest = $ontime  if ($ontime < $earliest);
-			$earliest = $offtime if ($offtime < $earliest);
-		}
-	}
-	return $earliest;
-}
-
 sub checkOnOff {
-	my $time = now();
+	my $now = now();
 	
-	$log->debug("Checking timer Autodisplay plugin: " . $time);
+	$log->debug("Checking timer Autodisplay plugin: " . $now);
+
+	my $earliest = $now + DAY;		# 24 hours from now.  Everything should be less than this.
 
 	foreach my $client (Slim::Player::Client::clients()) {
 		my $clientPrefs = $myPrefs->client($client);
@@ -364,8 +338,8 @@ sub checkOnOff {
 				my $power = $client->power();
 					
 				if ( !$power ) {
-					if (($offtime > $ontime && ($time >= $offtime || $time < $ontime)) ||
-						($offtime < $ontime && $time >= $offtime && $time < $ontime)) {
+					if (($offtime > $ontime && ($now >= $offtime || $now < $ontime)) ||
+						($offtime < $ontime && $now >= $offtime && $now < $ontime)) {
 					
 						$log->debug("$clientname Dim: $brightness");
 						#Set client brightness off
@@ -377,11 +351,19 @@ sub checkOnOff {
 						$client->brightness($x);
 					}
 				}
+				$ontime   += DAY if ($ontime <= $now);
+				$offtime  += DAY if ($offtime <= $now);
+				$earliest = $ontime  if ($ontime < $earliest);
+				$earliest = $offtime if ($offtime < $earliest);
 			}
 		}
 	}
 
-	setTimer($time);
+    Slim::Utils::Timers::killSpecific($timer) if (defined $timer);
+    
+    my $time = Time::HiRes::time() + ($earliest - $now);
+    $log->debug("Setting timer: Now: $now Later: $later Diff: " . ($later - $now) . " Time: $time");
+    $timer = Slim::Utils::Timers::setTimer(0, $time, \&checkOnOff);
 }
 
 1;
