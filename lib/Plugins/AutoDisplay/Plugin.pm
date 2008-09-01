@@ -4,6 +4,7 @@
 #Author: Felix Mueller <felix.mueller(at)gwendesign.com>
 #Redesigned for Slimserver 6.0+ by Tobias Goldstone <tgoldstone(at)familyzoo.net>
 #Ported to SqueezeCenter 7.0+ by Eric Koldinger <eric(at)koldware.com>
+#SqueezeCenter 7.0.1 and FuzzyTime support by Peter Watkins http://www.tux.org/~peterw/
 #
 #	Copyright (c) 2004 - 2006 GWENDESIGN
 #	All rights reserved.
@@ -12,6 +13,7 @@
 #	And based on Autodisplay Revision .2 by Felix Mueller
 #
 #	History:
+#	2008/07/15 v0.91b FuzzyTime support, support for SC7.01 and newer
 #   2008/02/15 v1.00 Squeezecenter 7.  Many cleanups.
 #	2006/12/24 v0.82 Minor bug fix.
 #	2006/12/10 V0.81 24H time format does not save in Web UI
@@ -101,9 +103,7 @@ my %defaults = (
 	'autodisplay_brightness'	=> 0,				# All the way dark.  Supported everyplace
 );
 
-my $timer;
-
-use constant DAY => (3600 * 24);				## Seconds in a day
+my %timer;
 
 our $brightness = ();
 my %functions = (
@@ -308,20 +308,50 @@ sub settingsExitHandler {
 	} 
 }
 
-sub now {
-    my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
+sub setTimer($$) {
+	my ($now,$client) = @_;
+	my $id = $client->id();
+	my $later = nextTime($now,$client);
+    	my $clientTime = &getFuzzyTime($client);
+    	my $time = $clientTime + ($later - $now);
+    	$log->debug("Setting timer for $id: Now: $now Later: $later Diff: " . ($later - $now) . " Client time: $clientTime, Schedule time: $time");
+    	if ( defined($timer{$id}) ) { &killFuzzyTimers($client, $client, \&checkOnOff); }
+    	$timer{$id} = &setFuzzyTimer($client, $client, $time, \&checkOnOff);
+}
+
+sub now($) {
+    my $timeVal = shift;
+    my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime($timeVal);
     my $time = $hour * 60 * 60 + $min * 60 + $sec;
     return $time;
 }
 
-sub checkOnOff {
-	my $now = now();
-	
-	$log->debug("Checking timer Autodisplay plugin: " . $now);
+sub nextTime($$) {
+    my ($now,$client) = @_;
+	my $day = 3600 * 24;				## Seconds in a day
+	my $earliest = $now + $day * 7;		## Week away.  Good number.
+	foreach my $client (Slim::Player::Client::clients()) {
+		my $clientPrefs = $myPrefs->client($client);
+		my $flag = $clientPrefs->get('autodisplay_flag');
+		if ($flag) {
+			my $ontime =  $clientPrefs->get('autodisplay_on_time');
+			my $offtime =  $clientPrefs->get('autodisplay_off_time');
 
-	my $earliest = $now + DAY;		# 24 hours from now.  Everything should be less than this.
+			$ontime   += $day if ($ontime <= $now);
+			$offtime  += $day if ($offtime <= $now);
+			$earliest = $ontime  if ($ontime < $earliest);
+			$earliest = $offtime if ($offtime < $earliest);
+		}
+	}
+	return $earliest;
+}
+
+sub checkOnOff {
+	
+	$log->debug("Checking timer Autodisplay plugin: " . &now(time()));
 
 	foreach my $client (Slim::Player::Client::clients()) {
+		my $time = now(&getFuzzyTime($client));
 		my $clientPrefs = $myPrefs->client($client);
 		my $flag = $clientPrefs->get('autodisplay_flag');
 		if ($flag) {
@@ -335,35 +365,77 @@ sub checkOnOff {
 			#If client has autodisplay on/off preference and times set then continue...
 			if (defined($flag) && defined($offtime) && defined($ontime)) {
 				#If autodisplay has been set to "ON" then continue...
-				my $power = $client->power();
+					my $currOffBrightness = $serverPrefs->client($client)->get('powerOffBrightness');
+					if (($offtime > $ontime && ($time >= $offtime || $time < $ontime)) ||
+						($offtime < $ontime && $time >= $offtime && $time < $ontime)) {
 					
-				if ( !$power ) {
-					if (($offtime > $ontime && ($now >= $offtime || $now < $ontime)) ||
-						($offtime < $ontime && $now >= $offtime && $now < $ontime)) {
-					
-						$log->debug("$clientname Dim: $brightness");
-						#Set client brightness off
-						$client->brightness($brightness);
+						my $restore = $clientPrefs->get('autodisplay_restore_brightness');
+						if ( (!defined($restore)) || ($restore eq '') ) {
+							$restore = $currOffBrightness;
+							$clientPrefs->set('autodisplay_restore_brightness',$currOffBrightness);
+							$log->debug("$clientname Dim: $brightness (restore to \"$restore\")");
+							#Set client brightness off
+							$serverPrefs->client($client)->set('powerOffBrightness',$brightness);
+							# don't sync this to SN
+							$serverPrefs->client($client)->timestamp('powerOffBrightness', 'wipe');
+						}
 					} else {
 						#Reset display brightness to user preference.
-						my $x = $serverPrefs->client($client)->get('powerOffBrightness');
-						$log->debug("$clientname Bright: " .  $x);
-						$client->brightness($x);
+						my $restore = $clientPrefs->get('autodisplay_restore_brightness');
+						if ( (defined($restore)) && ($restore ne '') && ($restore ne $currOffBrightness) ) {
+							$log->debug("$clientname Bright: " .  $restore);
+							$serverPrefs->client($client)->set('powerOffBrightness',$restore);
+							# don't sync this to SN
+							$serverPrefs->client($client)->timestamp('powerOffBrightness', 'wipe');
+							$clientPrefs->set('autodisplay_restore_brightness','');
+						}
 					}
-				}
-				$ontime   += DAY if ($ontime <= $now);
-				$offtime  += DAY if ($offtime <= $now);
-				$earliest = $ontime  if ($ontime < $earliest);
-				$earliest = $offtime if ($offtime < $earliest);
+				setTimer($time,$client);
 			}
 		}
 	}
 
-    Slim::Utils::Timers::killSpecific($timer) if (defined $timer);
-    
-    my $time = Time::HiRes::time() + ($earliest - $now);
-    $log->debug("Setting timer: Now: $now Later: $later Diff: " . ($later - $now) . " Time: $time");
-    $timer = Slim::Utils::Timers::setTimer(0, $time, \&checkOnOff);
 }
+
+sub getFuzzyTime {
+	my $client = shift;
+	if ( defined($Plugins::FuzzyTime::Plugin::apiVersion) ) {
+		return int(Plugins::FuzzyTime::Public::getClientTime($client));
+	}
+	return time();
+}
+
+# like Slim::Utils::Timers::setTimer
+# # *but* it takes 4-5 args:
+# #   required $client,
+# #   required $objRef (usually also $client),
+# #   required $displaytime (time to act, as displayed by FuzzyTime rather than real time),
+# #   required $subptr
+# #   optional @args
+# # pass the $client object for the appropriate player
+sub setFuzzyTimer {
+	my ($client, $objRef, $displaytime, $subptr, @args) = @_;
+	my $api = $Plugins::FuzzyTime::Plugin::apiVersion;
+	if ( defined($api) && ($api >= 1.1) ) {
+		return Plugins::FuzzyTime::Public::setTimer($client, $objRef, $displaytime, $subptr, @args);
+	}
+	return Slim::Utils::Timers::setTimer($objRef, $displaytime, $subptr, @args);
+}
+
+# like Slim::Utils::Timers::killTimers
+# *but* it takes 3 args
+#   required $client,
+#   required $objRef (usually also $client),
+#   required $coderef (same as $subptr in setFuzzyTimer)
+# pass the $client object for the appropriate player
+sub killFuzzyTimers {
+	my ($client, $obj, $coderef) = @_;
+	my $api = $Plugins::FuzzyTime::Plugin::apiVersion;
+	if ( defined($api) && ($api >= 1.1) ) {
+		return Plugins::FuzzyTime::Public::killTimers($client, $obj, $coderef);
+	}
+	return Slim::Utils::Timers::killTimers($obj, $coderef);
+}
+
 
 1;

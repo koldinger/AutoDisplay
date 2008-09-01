@@ -26,6 +26,14 @@ sub needsClient {
 	return 1;
 }
 
+# only for clients with displays
+# from Slim/Web/Settings/Player/Menu.pm
+sub validFor {
+        my $class = shift;
+        my $client = shift;
+        return !$client->display->isa('Slim::Display::NoDisplay');
+}
+
 sub page {
 	return Slim::Web::HTTP::protectURI('plugins/AutoDisplay/settings/player.html');
 }

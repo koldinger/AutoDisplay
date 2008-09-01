@@ -10,9 +10,9 @@
   <module>Plugins::AutoDisplay::Plugin</module>
   <targetApplication>
     <id>SqueezeCenter</id>
-    <maxVersion>*</maxVersion>
+    <maxVersion>7.1</maxVersion>
     <minVersion>7.0a</minVersion>
   </targetApplication>
   <type>2</type>
-  <version>0.91</version>
+  <version>0.91p2</version>
 </extension>
